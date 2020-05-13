@@ -1,5 +1,6 @@
 "use strict";
 require('heapdump');
+const memwatch = require('memwatch-next');
 
 var leakyData = [];
 var nonLeakyData = [];
@@ -39,9 +40,30 @@ function generateHeapDumpAndStats(){
   var heapUsed = process.memoryUsage().heapUsed;
   console.log("Program is using " + heapUsed + " bytes of Heap.")
 
+  //It can also do this...
+  const hd = new memwatch.HeapDiff();
+  // Do something that might leak memory
+  const diff = hd.end();
+  const { change: { freed_nodes, allocated_nodes }} = diff;
+  if (freed_nodes > 0 || allocated_nodes> 0) {
+    console.log(JSON.stringify(diff));
+  }
+
   //3. Get Heap dump
   process.kill(process.pid, 'SIGUSR2');
 }
+
+memwatch.gc();
+
+memwatch.on('leak', function(info) {
+  /*Log memory leak info, runs when memory leak is detected */
+  console.log('leak', JSON.stringify(info));
+ });
+
+memwatch.on('stats', function(stats) {
+  /*Log memory stats, runs when V8 does Garbage Collection*/
+  // console.log('stats', JSON.stringify(stats));
+});
 
 //Kick off the program
 setInterval(getAndStoreRandomData, 5); //Add random data every 5 milliseconds
